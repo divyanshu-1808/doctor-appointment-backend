@@ -102,31 +102,40 @@ def get_doctors(specialization: Optional[str] = None,
     return doctors
 
 @app.post("/appointments", response_model=schemas.AppointmentResponse)
-def book_appointment(appointment: schemas.AppointmentCreate,
-                     patient_id: int,
-                     db: Session = Depends(get_db)):
+def create_appointment(
+    appointment: schemas.AppointmentCreate,
+    db: Session = Depends(get_db)
+):
 
-    # Check if doctor exists
-    doctor = db.query(models.Doctor).filter(
-        models.Doctor.id == appointment.doctor_id
+    # Check doctor availability
+    slot = db.query(models.Availability).filter(
+        models.Availability.doctor_id == appointment.doctor_id,
+        models.Availability.date == appointment.date,
+        models.Availability.time_slot == appointment.time_slot
     ).first()
 
-    if not doctor:
-        raise HTTPException(status_code=404, detail="Doctor not found")
+    if not slot:
+        raise HTTPException(
+            status_code=400,
+            detail="Doctor not available for this slot"
+        )
 
-    # Prevent double booking
-    existing = db.query(models.Appointment).filter(
+    # Check if appointment already exists
+    existing_appointment = db.query(models.Appointment).filter(
         models.Appointment.doctor_id == appointment.doctor_id,
         models.Appointment.date == appointment.date,
         models.Appointment.time_slot == appointment.time_slot,
         models.Appointment.status == "booked"
     ).first()
 
-    if existing:
-        raise HTTPException(status_code=400, detail="Time slot already booked")
+    if existing_appointment:
+        raise HTTPException(
+            status_code=400,
+            detail="This slot is already booked"
+        )
 
     new_appointment = models.Appointment(
-        patient_id=patient_id,
+        patient_id=appointment.patient_id,
         doctor_id=appointment.doctor_id,
         date=appointment.date,
         time_slot=appointment.time_slot,
@@ -148,3 +157,21 @@ def get_patient_appointments(patient_id: int,
     ).all()
 
     return appointments
+
+@app.post("/availability", response_model=schemas.AvailabilityResponse)
+def add_availability(
+    availability: schemas.AvailabilityCreate,
+    db: Session = Depends(get_db)
+):
+
+    new_slot = models.Availability(
+        doctor_id=availability.doctor_id,
+        date=availability.date,
+        time_slot=availability.time_slot
+    )
+
+    db.add(new_slot)
+    db.commit()
+    db.refresh(new_slot)
+
+    return new_slot

@@ -56,6 +56,7 @@ class DoctorResponse(BaseModel):
         from_attributes = True
 
 class AppointmentCreate(BaseModel):
+    patient_id: int
     doctor_id: int
     date: date
     time_slot: str
@@ -67,6 +68,25 @@ class AppointmentResponse(BaseModel):
     date: date
     time_slot: str
     status: str
+
+    class Config:
+        from_attributes = True
+
+# -------------------------
+# Availability Schemas
+# -------------------------
+
+class AvailabilityCreate(BaseModel):
+    doctor_id: int
+    date: date
+    time_slot: str
+
+
+class AvailabilityResponse(BaseModel):
+    id: int
+    doctor_id: int
+    date: date
+    time_slot: str
 
     class Config:
         from_attributes = True
