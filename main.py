@@ -159,10 +159,19 @@ def get_patient_appointments(patient_id: int,
     return appointments
 
 @app.post("/availability", response_model=schemas.AvailabilityResponse)
-def add_availability(
-    availability: schemas.AvailabilityCreate,
-    db: Session = Depends(get_db)
-):
+def create_availability(availability: schemas.AvailabilityCreate, db: Session = Depends(get_db)):
+
+    existing_slot = db.query(models.Availability).filter(
+        models.Availability.doctor_id == availability.doctor_id,
+        models.Availability.date == availability.date,
+        models.Availability.time_slot == availability.time_slot
+    ).first()
+
+    if existing_slot:
+        raise HTTPException(
+            status_code=400,
+            detail="This availability slot already exists"
+        )
 
     new_slot = models.Availability(
         doctor_id=availability.doctor_id,
@@ -175,3 +184,52 @@ def add_availability(
     db.refresh(new_slot)
 
     return new_slot
+
+@app.get("/availability/{doctor_id}", response_model=list[schemas.AvailabilityResponse])
+def get_doctor_availability(doctor_id: int, db: Session = Depends(get_db)):
+
+    slots = db.query(models.Availability).filter(
+        models.Availability.doctor_id == doctor_id
+    ).all()
+
+    return slots
+
+@app.get("/appointments/patient/{patient_id}", response_model=list[schemas.AppointmentResponse])
+def get_patient_appointments(patient_id: int, db: Session = Depends(get_db)):
+
+    appointments = db.query(models.Appointment).filter(
+        models.Appointment.patient_id == patient_id
+    ).all()
+
+    return appointments
+
+@app.put("/appointments/cancel/{appointment_id}", response_model=schemas.AppointmentResponse)
+def cancel_appointment(appointment_id: int, db: Session = Depends(get_db)):
+
+    appointment = db.query(models.Appointment).filter(
+        models.Appointment.id == appointment_id
+    ).first()
+
+    if not appointment:
+        raise HTTPException(
+            status_code=404,
+            detail="Appointment not found"
+        )
+
+    appointment.status = "cancelled"
+
+    db.commit()
+    db.refresh(appointment)
+
+    return appointment
+
+    return appointments
+
+@app.get("/appointments/doctor/{doctor_id}", response_model=list[schemas.AppointmentResponse])
+def get_doctor_appointments(doctor_id: int, db: Session = Depends(get_db)):
+
+    appointments = db.query(models.Appointment).filter(
+        models.Appointment.doctor_id == doctor_id
+    ).all()
+
+    return appointments
