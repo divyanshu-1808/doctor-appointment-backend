@@ -148,15 +148,7 @@ def create_appointment(
 
     return new_appointment
 
-@app.get("/appointments", response_model=list[schemas.AppointmentResponse])
-def get_patient_appointments(patient_id: int,
-                             db: Session = Depends(get_db)):
 
-    appointments = db.query(models.Appointment).filter(
-        models.Appointment.patient_id == patient_id
-    ).all()
-
-    return appointments
 
 @app.post("/availability", response_model=schemas.AvailabilityResponse)
 def create_availability(availability: schemas.AvailabilityCreate, db: Session = Depends(get_db)):
@@ -223,7 +215,7 @@ def cancel_appointment(appointment_id: int, db: Session = Depends(get_db)):
 
     return appointment
 
-    return appointments
+
 
 @app.get("/appointments/doctor/{doctor_id}", response_model=list[schemas.AppointmentResponse])
 def get_doctor_appointments(doctor_id: int, db: Session = Depends(get_db)):
